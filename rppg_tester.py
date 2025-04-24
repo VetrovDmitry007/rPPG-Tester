@@ -40,7 +40,7 @@ from rppg_benchmark.interfaces import IRPPGModel
 # Настройки и константы
 # ────────────────────────────────
 SETTINGS_FILE = "settings.json"
-MEASURE_SECONDS = 20
+MEASURE_SECONDS = 100
 
 DEFAULT_MODEL_PATH = "rppg_benchmark.adapters.yarppg_adapter:YarppgAdapter"
 
@@ -62,7 +62,7 @@ MINDFULNESS_EXERCISES = [
 # Вспомогательные классы / функции
 # ────────────────────────────────
 class FpsTracker:
-    """Скользящий счётчик FPS (~1 с окно)."""
+    """Скользящий счётчик FPS (~1 с. окно)."""
 
     def __init__(self) -> None:
         self._t0 = time.time()
@@ -150,6 +150,7 @@ def check_in(model: IRPPGModel, *, athlete: bool = False) -> None:
 
         if tracker.fps > 0:
             hr_bpm = model.get_hr(tracker.fps)
+            # print(f"HR={hr_bpm:.1f} BPM ({tracker.fps:.1f} FPS)")
             if np.isfinite(hr_bpm) and hr_bpm > 0:
                 hrs.append(hr_bpm)
 

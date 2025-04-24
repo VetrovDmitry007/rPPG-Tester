@@ -23,9 +23,11 @@ class YarppgAdapter(IRPPGModel):  # pylint: disable=too-few-public-methods
 
     def process_frame(self, frame_rgb: np.ndarray, ts: float | None = None) -> None:  # noqa: D401,E501
         res = self._core.process_frame(frame_rgb)
-        # assume `res.raw` holds raw rPPG value per frame; adjust if API differs
-        if hasattr(res, "raw") and res.raw is not None:
-            self._buf.append(float(res.raw))
+        if hasattr(res, "hr") and res.hr is not None and res.hr > 0:
+            fps = 30.0  # предполагаемая частота кадров (или вычисляем динамически)
+            bpm = 60.0 * fps / res.hr
+            print(f"HR: {bpm:.1f} BPM")
+            self._buf.append(float(bpm))
 
     def get_ppg(self) -> np.ndarray:  # noqa: D401
         return np.asarray(self._buf, dtype=np.float32)
