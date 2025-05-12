@@ -1,10 +1,10 @@
-"""Адаптер, который подключает библиотеку `yarppg` к irppgmodel."""
+"""
+Адаптер, который подключает библиотеку `yarppg` к irppgmodel.
+"""
 from __future__ import annotations
-
 from typing import List
-
 import numpy as np
-import yarppg  # type: ignore  # third‑party C++/cython bindings
+import yarppg  # pip install git+https://github.com/SamProell/yarppg.git
 
 from ..interfaces import IRPPGModel
 
