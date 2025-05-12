@@ -16,7 +16,6 @@ class RPPGBenchmark:  # pylint: disable=too-few-public-methods
         self.dataset = dataset
         self.fps = float(fps)
 
-    # ──────────────────────────────────
     def evaluate(self, model: IRPPGModel, name: str | None = None) -> Dict[str, float]:
         model.reset()
         preds: list[float] = []
