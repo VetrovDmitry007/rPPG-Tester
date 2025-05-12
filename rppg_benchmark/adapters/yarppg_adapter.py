@@ -17,17 +17,36 @@ class YarppgAdapter(IRPPGModel):  # pylint: disable=too-few-public-methods
         self._buf: List[float] = []
 
     # interface impl. ─────────────────────────
-    def reset(self) -> None:  # noqa: D401
+    def reset(self) -> None:
         self._core = yarppg.Rppg()
         self._buf.clear()
 
-    def process_frame(self, frame_rgb: np.ndarray, ts: float | None = None) -> None:  # noqa: D401,E501
+    def process_frame(self, frame_rgb: np.ndarray, fps, ts: float | None = None) -> None:
+        """ Заполняет буфер сигналом RPPG.
+
+        :params frame_rgb: RGB image in H×W×3 layout.
+        :params ts: Optional timestamp (seconds).
+        :params fps: Частота кадров.
+        """
         res = self._core.process_frame(frame_rgb)
         if hasattr(res, "hr") and res.hr is not None and res.hr > 0:
-            fps = 30.0  # предполагаемая частота кадров (или вычисляем динамически)
             bpm = 60.0 * fps / res.hr
-            print(f"HR: {bpm:.1f} BPM")
+            print(f"{fps=}, HR: {bpm:.1f} BPM")
             self._buf.append(float(bpm))
 
     def get_ppg(self) -> np.ndarray:  # noqa: D401
         return np.asarray(self._buf, dtype=np.float32)
+
+    def get_hr(self, fps: float) -> float:
+        hr_array = np.asarray(self._buf, dtype=np.float32)
+        if hr_array.size < fps * 2:
+            return float("nan")
+
+        mu = hr_array.mean()
+        sigma = hr_array.std()
+        filtered = hr_array[np.abs(hr_array - mu) <= 3 * sigma]
+
+        if filtered.size == 0:
+            return float("nan")
+
+        return float(filtered.mean())  # или np.median(filtered) если предпочтительна медиана

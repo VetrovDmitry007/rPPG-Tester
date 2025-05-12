@@ -40,7 +40,7 @@ from rppg_benchmark.interfaces import IRPPGModel
 # Настройки и константы
 # ────────────────────────────────
 SETTINGS_FILE = "settings.json"
-MEASURE_SECONDS = 100
+MEASURE_SECONDS = 20
 
 DEFAULT_MODEL_PATH = "rppg_benchmark.adapters.yarppg_adapter:YarppgAdapter"
 
@@ -73,7 +73,7 @@ class FpsTracker:
         self._frames += 1
         dt = time.time() - self._t0
         if dt >= 1.0:
-            self.fps = self._frames / dt
+            self.fps = round(self._frames / dt, 3)
             self._frames = 0
             self._t0 = time.time()
 
@@ -125,7 +125,7 @@ def dynamic_import(path: str) -> Type[IRPPGModel]:
 # Основная логика измерения
 # ────────────────────────────────
 def check_in(model: IRPPGModel, *, athlete: bool = False) -> None:
-    """Одна 20-секундная сессия измерения HR."""
+    """Одна 20-секундная сессия измерения HR (без двойного усреднения)."""
     cam = cv2.VideoCapture(0)
     if not cam.isOpened():
         print("[ERROR] Cannot open camera")
@@ -133,7 +133,6 @@ def check_in(model: IRPPGModel, *, athlete: bool = False) -> None:
 
     model.reset()
     tracker = FpsTracker()
-    hrs: List[float] = []
 
     print(f"[*] Measuring HR for {MEASURE_SECONDS} s …")
     warnings.filterwarnings("ignore", message="Mean of empty slice")
@@ -145,25 +144,28 @@ def check_in(model: IRPPGModel, *, athlete: bool = False) -> None:
             break
 
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        model.process_frame(frame_rgb)
+        model.process_frame(frame_rgb, fps=tracker.fps)
         tracker.tick()
 
+        # Отладочный вывод в реальном времени (опционально)
         if tracker.fps > 0:
             hr_bpm = model.get_hr(tracker.fps)
-            # print(f"HR={hr_bpm:.1f} BPM ({tracker.fps:.1f} FPS)")
             if np.isfinite(hr_bpm) and hr_bpm > 0:
-                hrs.append(hr_bpm)
+                print(f"HR={hr_bpm:.1f} BPM ({tracker.fps:.1f} FPS)", end="\r")
 
     cam.release()
 
-    if not hrs:
-        print("[WARN] No valid HR values collected")
+    # После завершения сессии — получить итоговое значение HR
+    final_hr = model.get_hr(tracker.fps)
+    if not np.isfinite(final_hr) or final_hr <= 0:
+        print("\n[WARN] No valid HR value collected")
         return
 
-    avg_hr = float(np.mean(hrs))
-    bad, report = is_hr_anomalous(avg_hr, athlete=athlete)
+    # Анализ и рекомендации
+    bad, report = is_hr_anomalous(final_hr, athlete=athlete)
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
+    print()  # перенос строки после \r
     if bad:
         exercise = random.choice(MINDFULNESS_EXERCISES)
         print(f"[{timestamp}] 🚨 High HR! {report}")

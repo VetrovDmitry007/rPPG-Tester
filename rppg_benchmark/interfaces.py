@@ -22,8 +22,9 @@ class IRPPGModel(ABC):
         """Сбросьте все внутренние буферы и состояние перед новым сеансом/видео."""
 
     @abstractmethod
-    def process_frame(self, frame_rgb: np.ndarray, ts: float | None = None) -> None:
-        """Потреблять одну рамку RGB (H×W×3, uint8 or float32).
+    def process_frame(self, frame_rgb: np.ndarray, fps, ts: float | None = None) -> None:
+        """Обработка одного кадра RGB (H×W×3, uint8 or float32).
+        Заполняет буфер сигналом RPPG.
 
         Parameters
         ----------
@@ -35,21 +36,8 @@ class IRPPGModel(ABC):
 
     @abstractmethod
     def get_ppg(self) -> np.ndarray:
-        """Верните накопленный сигнал RPPG в виде массива 1 -D Float32."""
+        """Возвращает накопленный сигнал RPPG в виде массива 1-D Float32."""
 
-    # ── Convenience helpers ────────────────────────────
-    def get_hr(self, fps: float) -> float:  # noqa: D401
-        """Вычислить мгновенный HR (BPM) из текущего сигнала.
-
-        Реализация по умолчанию находит доминирующий пик FFP и преобразует его
-        к BPM. Переопределить для более сложных методов (например, Band -Pass,
-        Обнаружение пика, фильтрация Калмана…).
-        """
-        signal = self.get_ppg()
-        if signal.size < fps * 2:  # need at least 2 s window
-            return float("nan")
-
-        ffreq = np.fft.rfftfreq(signal.size, d=1 / fps)
-        spec = np.abs(np.fft.rfft(signal - signal.mean()))
-        peak_hz = ffreq[np.argmax(spec)]
-        return float(peak_hz * 60.0)
+    @abstractmethod
+    def get_hr(self, fps: float) -> float:
+        """Вычислить мгновенный HR (BPM) из текущего сигнала. """
