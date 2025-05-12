@@ -6,8 +6,8 @@ from rppg_benchmark.datasets import load_dataset
 from rppg_benchmark.benchmark import RPPGBenchmark
 from rppg_tester import dynamic_import
 
-DEFAULT_MODEL_PATH = "rppg_benchmark.adapters.yarppg_adapter:YarppgAdapter"
-ModelCls = dynamic_import(DEFAULT_MODEL_PATH)
+MODEL_PATH = "rppg_benchmark.adapters.yarppg_adapter:YarppgAdapter"
+ModelCls = dynamic_import(MODEL_PATH)
 model = ModelCls()
 
 # для видео MPG с PPG-CSV
