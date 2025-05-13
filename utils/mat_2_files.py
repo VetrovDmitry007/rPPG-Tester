@@ -10,7 +10,7 @@ import pandas as pd
 import cv2
 import os
 
-mat_path = "../data/SCAMPS_smail/P000001.mat"
+mat_path = "../data/SCAMPS_smail/P000002.mat"
 out_dir = "../data/SCAMPS_smail/output_data"
 os.makedirs(out_dir, exist_ok=True)
 

@@ -24,13 +24,13 @@ class RPPGSignalAnalyzer:
     - визуализация и подготовка данных для оценки моделей.
     """
 
-    def __init__(self, df: pd.DataFrame, fps: float = 30.0):
+    def __init__(self, ppg: np.ndarray, fps: float = 30.0):
         """
         Инициализация на основе DataFrame с одним столбцом сигнала.
-        :param df: DataFrame с временным рядом rPPG (сырые значения rPPG)
+        :param ppg: Масcив 1-D с временным рядом rPPG (сырые значения rPPG)
         :param fps: Частота кадров, с которой был получен сигнал
         """
-        self.signal = df.iloc[:, 0].values.astype(np.float32)
+        self.signal =  ppg.astype(np.float32)
         self.fps = fps
         self.n = len(self.signal)
         self.duration_sec = self.n / self.fps
@@ -136,8 +136,8 @@ class RPPGSignalAnalyzer:
 if __name__ == '__main__':
     import pandas as pd
 
-    df = pd.read_csv("../data/SCAMPS_smail/output_data/ppg.csv")
-    analyzer = RPPGSignalAnalyzer(df, fps=30)
+    ppd = pd.read_csv("../data/SCAMPS_smail/output_data/ppg.csv").to_numpy().squeeze()
+    analyzer = RPPGSignalAnalyzer(ppd, fps=30)
 
     print(analyzer.summary())
     analyzer.plot_signal_with_peaks()

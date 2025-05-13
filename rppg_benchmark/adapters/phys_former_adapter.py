@@ -3,11 +3,12 @@
 https://github.com/ZitongYu/PhysFormer
 """
 import cv2
-
-from rppg_benchmark.interfaces import IRPPGModel
 import torch
 import numpy as np
-from PhysFormer.model import ViT_ST_ST_Compact3_TDC_gra_sharp
+
+from rppg_benchmark.models.PhysFormer.Physformer import ViT_ST_ST_Compact3_TDC_gra_sharp
+from rppg_benchmark.interfaces import IRPPGModel
+from rppg_benchmark.rppg_analyzer import RPPGSignalAnalyzer
 
 
 class PhysFormerAdapter(IRPPGModel):
@@ -20,7 +21,10 @@ class PhysFormerAdapter(IRPPGModel):
                                                       num_layers=12,
                                                       dropout_rate=0.1,
                                                       theta=0.7)
-        ckpt_path = "./rppg_benchmark/adapters/models/PURE_PhysFormer_DiffNormalized.pth"
+        # ckpt_path = "rppg_benchmark/models/PhysFormer/PURE_PhysFormer_DiffNormalized.pth"
+        # ckpt_path = "rppg_benchmark/models/PhysFormer/Physformer_VIPL_fold1.pkl"
+        # ckpt_path = "rppg_benchmark/models/PhysFormer/SCAMPS_PhysFormer_DiffNormalized.pth"
+        ckpt_path = "rppg_benchmark/models/PhysFormer/UBFC-rPPG_PhysFormer_DiffNormalized.pth"
         state_dict = torch.load(ckpt_path, map_location="cpu")
         if any(k.startswith("module.") for k in state_dict):
             state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
@@ -32,10 +36,13 @@ class PhysFormerAdapter(IRPPGModel):
     def reset(self):
         self.frames.clear()
 
+    def load_dataset(self, dataset):
+        self.frames = list(dataset)
+
     def process_frame(self, frame_rgb, fps=30, ts=None):
         self.frames.append(frame_rgb)
 
-    def get_ppg(self):
+    def get_ppg(self) -> np.array:
         """ Возвращает предсказанный временной ряд, отражающим фотоплетизмографическую волну,
          извлечённую моделью PhysFormer из видеопоследовательности
 
@@ -43,14 +50,26 @@ class PhysFormerAdapter(IRPPGModel):
         - Чем меньше gra_sharp, тем резче (пиковее) будет attention (softmax станет круче).
         - Чем больше gra_sharp, тем плавнее и расфокусированнее attention.
         """
+        ls_res = []
 
         if len(self.frames) < 160:
             return np.array([], dtype=np.float32)
-        x = self._preprocess(self.frames)
-        # print(f"x.shape = {x.shape}") # Отладка — размерность тензора
-        with torch.no_grad():
-            rppg, *_ = self.model(x, gra_sharp=2.0)
-        return rppg.squeeze().cpu().numpy()
+
+        while len(self.frames) > 160:
+            frames_0 = self.frames[:160]
+
+            x = self._preprocess(frames_0)
+            print(f"x.shape = {x.shape}") # Отладка — размерность тензора
+            with torch.no_grad():
+                rppg, *_ = self.model(x, gra_sharp=2.0)
+
+            # Преобразуем в 1-D numpy и добавляем к общему сигналу
+            ls_res.extend(rppg.squeeze().cpu().tolist())
+
+            self.frames = self.frames[160:]
+
+        self.raw_ppd = np.array(ls_res, dtype=np.float32)
+        return self.raw_ppd
 
 
     def _preprocess(self, frames):
@@ -72,10 +91,13 @@ class PhysFormerAdapter(IRPPGModel):
         return torch.tensor(arr)
 
     def get_hr(self, fps: float):
-        """ Извлечение ЧСС (Heart Rate, BPM) из предсказанного временного ряда
+        """ Извлечение параметров ЧСС (Heart Rate, BPM) из предсказанного временного ряда
 
         """
-        pass
+        analyzer = RPPGSignalAnalyzer(self.raw_ppd, fps=fps)
+        print(analyzer.summary())
+        analyzer.plot_signal_with_peaks()
+        analyzer.plot_fft_spectrum()
 
 
 if __name__ == "__main__":

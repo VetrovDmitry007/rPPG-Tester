@@ -22,6 +22,10 @@ class IRPPGModel(ABC):
         """Сбросьте все внутренние буферы и состояние перед новым сеансом/видео."""
 
     @abstractmethod
+    def load_dataset(self, dataset) -> None:
+        """Загрузка данных. """
+
+    @abstractmethod
     def process_frame(self, frame_rgb: np.ndarray, fps, ts: float | None = None) -> None:
         """Обработка одного кадра RGB (H×W×3, uint8 or float32).
         Заполняет буфер сигналом RPPG.
@@ -36,7 +40,8 @@ class IRPPGModel(ABC):
 
     @abstractmethod
     def get_ppg(self) -> np.ndarray:
-        """Возвращает накопленный сигнал RPPG в виде массива 1-D Float32."""
+        """Возвращает предсказанный временной ряд, отражающим фотоплетизмографическую волну
+         в виде массива 1-D Float32."""
 
     @abstractmethod
     def get_hr(self, fps: float) -> float:
