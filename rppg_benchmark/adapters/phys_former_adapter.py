@@ -21,10 +21,10 @@ class PhysFormerAdapter(IRPPGModel):
                                                       num_layers=12,
                                                       dropout_rate=0.1,
                                                       theta=0.7)
-        # ckpt_path = "rppg_benchmark/models/PhysFormer/PURE_PhysFormer_DiffNormalized.pth"
+        ckpt_path = "rppg_benchmark/models/PhysFormer/PURE_PhysFormer_DiffNormalized.pth"
         # ckpt_path = "rppg_benchmark/models/PhysFormer/Physformer_VIPL_fold1.pkl"
         # ckpt_path = "rppg_benchmark/models/PhysFormer/SCAMPS_PhysFormer_DiffNormalized.pth"
-        ckpt_path = "rppg_benchmark/models/PhysFormer/UBFC-rPPG_PhysFormer_DiffNormalized.pth"
+        # ckpt_path = "rppg_benchmark/models/PhysFormer/UBFC-rPPG_PhysFormer_DiffNormalized.pth"
         state_dict = torch.load(ckpt_path, map_location="cpu")
         if any(k.startswith("module.") for k in state_dict):
             state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}

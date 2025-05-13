@@ -1,3 +1,4 @@
 torch
 opencv-python
 h5py
+scikit-learn

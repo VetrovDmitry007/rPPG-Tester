@@ -8,12 +8,12 @@ import numpy as np
 
 from rppg_benchmark.models.DeepPhys.DeepPhys import DeepPhys
 from rppg_benchmark.interfaces import IRPPGModel
-from rppg_benchmark.rppg_analyzer import RPPGSignalAnalyzer
 
 class DeepPhysAdapter(IRPPGModel):
     def __init__(self):
         self.model = DeepPhys(img_size=72)
-        ckpt_path = "rppg_benchmark/models/DeepPhys/SCAMPS_DeepPhys.pth"
+        # ckpt_path = "rppg_benchmark/models/DeepPhys/SCAMPS_DeepPhys.pth"
+        ckpt_path = "rppg_benchmark/models/DeepPhys/UBFC-rPPG_DeepPhys.pth"
         state_dict = torch.load(ckpt_path, map_location="cpu")
         if any(k.startswith("module.") for k in state_dict):
             state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
