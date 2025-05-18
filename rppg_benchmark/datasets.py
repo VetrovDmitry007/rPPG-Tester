@@ -53,6 +53,8 @@ class VideoDataset:  # pylint: disable=too-few-public-methods
                 break
             frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
             frames.append(frame_rgb)
+
+        self.fps = round(cap.get(cv2.CAP_PROP_FPS), 2)
         cap.release()
 
         # Формируем список образцов

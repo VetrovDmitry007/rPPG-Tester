@@ -1,8 +1,9 @@
 """Common quality metrics for rPPG evaluation."""
 from __future__ import annotations
-
 import numpy as np
 from scipy.stats import pearsonr
+
+from rppg_benchmark.rppg_analyzer import RPPGSignalAnalyzer
 
 
 def mae(pred: np.ndarray, ref: np.ndarray) -> float:
@@ -37,3 +38,63 @@ def smape(pred, ref):
     denominator = (np.abs(ref) + np.abs(pred)) / 2.0
     mask = denominator != 0
     return np.mean(np.abs(pred[mask] - ref[mask]) / denominator[mask]) * 100
+
+def ref_mean_hr(ref_ppg, fps: float = 30):
+    """ Среднее (ЧСС) HR по пикам (BPM) на основе эталонного сигнала
+
+    :param ref_ppg: Эталонный PPG
+    :param fps: Частота кадров
+    """
+    ref_analyzer = RPPGSignalAnalyzer(ref_ppg, fps=fps)
+    return ref_analyzer.mean_hr
+
+def pred_mean_hr(pred_ppg, fps: float = 30):
+    """ Среднее (ЧСС) HR по пикам (BPM) на основе прогнозируемого сигнала
+
+    :param pred_ppg: Прогнозируемый PPG
+    :param fps: Частота кадров
+    """
+    pred_analyzer = RPPGSignalAnalyzer(pred_ppg, fps=fps)
+    return pred_analyzer.mean_hr
+
+def errors_mean_hr(ref_ppg, pred_ppg, fps: float = 30):
+    """ Ошибка в процентах между эталонного и прогнозируемого сигналов среднего (ЧСС)
+
+    :param ref_ppg: Эталонный PPG
+    :param pred_ppg: Прогнозируемый PPG
+    :param fps: Частота кадров
+    """
+    val_ref = ref_mean_hr(ref_ppg, fps=fps)
+    val_pred = pred_mean_hr(pred_ppg, fps=fps)
+    res = round(abs(val_pred - val_ref) / val_ref * 100, 1)
+    return res
+
+def ref_median_hr(ref_ppg, fps: float = 30):
+    """ Медианный (ЧСС) HR по пикам (BPM) на основе эталонного сигнала
+
+    :param ref_ppg: Эталонный PPG
+    :param fps: Частота кадров
+    """
+    ref_analyzer = RPPGSignalAnalyzer(ref_ppg, fps=fps)
+    return ref_analyzer.median_hr
+
+def pred_median_hr(pred_ppg, fps: float = 30):
+    """ Медианный (ЧСС) HR по пикам (BPM) на основе прогнозируемого сигнала
+
+    :param pred_ppg: Прогнозируемый PPG
+    :param fps: Частота кадров
+    """
+    pred_analyzer = RPPGSignalAnalyzer(pred_ppg, fps=fps)
+    return pred_analyzer.median_hr
+
+def errors_median_hr(ref_ppg, pred_ppg, fps: float = 30):
+    """ Ошибка в процентах между эталонного и прогнозируемого сигналов медианный (ЧСС)
+
+    :param ref_ppg: Эталонный PPG
+    :param pred_ppg: Прогнозируемый PPG
+    :param fps: Частота кадров
+    """
+    val_ref = ref_median_hr(ref_ppg, fps=fps)
+    val_pred = pred_median_hr(pred_ppg, fps=fps)
+    res = round(abs(val_pred - val_ref) / val_ref * 100, 1)
+    return res
