@@ -98,3 +98,21 @@ def errors_median_hr(ref_ppg, pred_ppg, fps: float = 30):
     val_pred = pred_median_hr(pred_ppg, fps=fps)
     res = round(abs(val_pred - val_ref) / val_ref * 100, 1)
     return res
+
+def ref_hrv(ref_ppg, fps: float = 30):
+    """ Вариабельность сердечного ритма (разброс между последовательными ударами сердца)
+
+    :param pred_ppg: Эталонный PPG
+    :param fps: Частота кадров
+    """
+    ref_analyzer = RPPGSignalAnalyzer(ref_ppg, fps=fps)
+    return ref_analyzer.hrv
+
+def pred_hrv(pred_ppg, fps: float = 30):
+    """ Вариабельность сердечного ритма (разброс между последовательными ударами сердца)
+
+    :param pred_ppg: Прогнозируемый PPG
+    :param fps: Частота кадров
+    """
+    pred_analyzer = RPPGSignalAnalyzer(pred_ppg, fps=fps)
+    return pred_analyzer.hrv

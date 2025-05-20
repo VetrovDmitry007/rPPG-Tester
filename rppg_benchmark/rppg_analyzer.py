@@ -17,6 +17,13 @@ class RPPGSignalAnalyzer:
     5. 'BPM по числу пиков'
     6.  'Число пиков
 
+    BPM – это сокращение от "ударов в минуту" (beats per minute).
+    "HR по БПФ" – пульс, вычисленный через частотный анализ (Фурье).
+
+    HRV – это вариабельность сердечного ритма (разброс между последовательными ударами сердца).
+    - Чем выше HRV, тем более адаптивна нервная система (обычно показатель хорошего здоровья и стрессоустойчивости).
+    - Чем ниже HRV, тем более ригиден (напряжён) организм (может указывать на усталость, стресс или болезни).
+
     В процессе вычисления производится:
     - фильтрация сигнала,
     - извлечение пиков,
@@ -38,9 +45,11 @@ class RPPGSignalAnalyzer:
         # Фильтрация сигнала в допустимом диапазоне (0.7–4 Гц)
         self.filtered = self._bandpass_filter(self.signal)
 
-        # Поиск пиков (минимум 0.5 секунды между пиками)
+        # Ищутся локальные максимумы (пики), соответствующие ударам сердца
         self.peaks, _ = find_peaks(self.filtered, distance=self.fps * 0.5)
+        # Переводим индексы пиков (в отсчётах) во время (в секундах).
         self.peak_times = self.peaks / self.fps
+        # ibi -- время между соседними ударами (в секундах !!!)
         self.ibi = np.diff(self.peak_times)
         self.hr_from_peaks = 60 / self.ibi if len(self.ibi) > 0 else np.array([])
 
@@ -52,8 +61,12 @@ class RPPGSignalAnalyzer:
         :param highcut: верхняя граница в Гц
         :return: фильтрованный сигнал
         """
+        # Находим частоту Найквиста
         nyquist = 0.5 * self.fps
+        # Цифровой полосовой фильтр Баттерворта 3-го порядка, пропускает частоты [0.7–4.0] Гц
+        # возвращает массивы b и a, которые полностью описывают поведение фильтра
         b, a = butter(N=3, Wn=[lowcut / nyquist, highcut / nyquist], btype='band')
+        # Применяется двухпроходная фильтрация
         return filtfilt(b, a, signal)
 
     def compute_fft_hr(self) -> float:
@@ -79,6 +92,12 @@ class RPPGSignalAnalyzer:
     def mean_hr(self):
         """ Средний (ЧСС) HR по пикам (BPM) """
         return  round(np.mean(self.hr_from_peaks), 1) if self.hr_from_peaks.size else float(
+                "nan")
+
+    @property
+    def hrv(self):
+        """ HRV – вариабельность сердечного ритма """
+        return round(np.std(self.hr_from_peaks), 2) if self.hr_from_peaks.size else float(
                 "nan")
 
     def summary(self) -> dict:
@@ -136,7 +155,7 @@ class RPPGSignalAnalyzer:
 if __name__ == '__main__':
     import pandas as pd
 
-    ppd = pd.read_csv("../data/SCAMPS_smail/output_data/ppg.csv").to_numpy().squeeze()
+    ppd = pd.read_csv("../data/SCAMPS_smail/output_data/ppg_1.csv").to_numpy().squeeze()
     analyzer = RPPGSignalAnalyzer(ppd, fps=30)
 
     print(analyzer.summary())
