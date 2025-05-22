@@ -6,7 +6,7 @@ from typing import Dict
 import numpy as np
 
 from .interfaces import IRPPGModel
-from .metrics import corr, mae, rmse, snr
+from emo_state.metrics import corr, mae, rmse, snr
 
 
 class RPPGBenchmark:  # pylint: disable=too-few-public-methods

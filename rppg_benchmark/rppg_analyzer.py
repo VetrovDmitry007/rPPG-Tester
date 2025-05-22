@@ -1,5 +1,10 @@
+import math
+from pprint import pprint
+from typing import Dict
+
 import numpy as np
 import pandas as pd
+import scipy.signal as sp
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt, find_peaks
 from scipy.fft import rfft, rfftfreq
@@ -16,6 +21,7 @@ class RPPGSignalAnalyzer:
     4. 'Стандартное отклонение (ЧСС) HR (HRV)
     5. 'BPM по числу пиков'
     6.  'Число пиков
+    7. Вычисление комплекса показателей вариабельности сердечного ритма HRV
 
     BPM – это сокращение от "ударов в минуту" (beats per minute).
     "HR по БПФ" – пульс, вычисленный через частотный анализ (Фурье).
@@ -42,16 +48,109 @@ class RPPGSignalAnalyzer:
         self.n = len(self.signal)
         self.duration_sec = self.n / self.fps
 
-        # Фильтрация сигнала в допустимом диапазоне (0.7–4 Гц)
+        # Фильтрация сигнала в допустимом диапазоне (0.6–4 Гц)
         self.filtered = self._bandpass_filter(self.signal)
 
         # Ищутся локальные максимумы (пики), соответствующие ударам сердца
+        # 0.5 -- Ограничивает макс. ЧСС ≈ 120
         self.peaks, _ = find_peaks(self.filtered, distance=self.fps * 0.5)
         # Переводим индексы пиков (в отсчётах) во время (в секундах).
         self.peak_times = self.peaks / self.fps
         # ibi -- время между соседними ударами (в секундах !!!)
         self.ibi = np.diff(self.peak_times)
+        # ЧСС
         self.hr_from_peaks = 60 / self.ibi if len(self.ibi) > 0 else np.array([])
+
+        # rr_ms -- интервалы между ударами сердца в ms.
+        self.rr_ms = self.ibi * 1000
+        # Вычисление комплекса показателей вариабельности сердечного ритма HRV
+        self.index_hrv = self.calc_hrv(self.rr_ms)
+
+    def calc_hrv(self, rr_ms:np.ndarray) -> Dict:
+        """ Вычисление комплекса показателей вариабельности сердечного ритма HRV
+        (SDNN, RMSSD, pNN20, pNN50, SD1, SD2, SD1/SD2, CSI, CVI)
+
+        SDNN — Общая вариабельность (рекомендуется для окон > 30 сек.)
+        RMSSD — Кратковременная вариабельность
+        pNN20 — процент(20) отличия соседних RR-интервалов
+        pNN50 — процент(50) отличия соседних RR-интервалов
+        SD1 — поперечная вариабельность
+        SD2 — продольная вариабельность
+        SD1/SD2 - индикатор автономного баланса, чем меньше — тем сильнее симпатика
+        CSI, CVI — индексы стресса (рекомендуется для окон > 30 сек.)
+        """
+        # rr_ms = np.array([800, 810, 790, 780, 795, 805, 800, 790])
+        mean_rr = np.mean(rr_ms)
+
+        # 1. Временные метрики (Время-доменные индексы HRV) -- SDNN,
+        # RMSSD, pNN50 (для окон 20-30–с.)
+        sdnn = np.std(rr_ms, ddof=1)
+        rmssd = np.sqrt(np.mean(np.diff(rr_ms) ** 2))
+        pnn20 = self.pnn20(rr_ms)
+        pnn50 = self.pnn50(rr_ms)
+
+        # # 2. Спектральные показатели -- LF, HF, LF/HF (требуют ≥ 1 мин)
+        # rr_s = rr_ms / 1000  # сек
+        # fs = 4  # Гц — целевая частота дискретизации (интерполяции)
+        # t = np.cumsum(np.r_[0, rr_s])  # абсолютные временные отметки ударов сердца
+        # ts = np.arange(0, t[-1], 1 / fs)  # равномерная временная шкала
+        # rri = np.interp(ts, t[:-1], rr_s)  # линейная интерполяция RR на сетку ts
+        # # ── Спектральный анализ методом Welch ──────────────────────────
+        # # f — массив частот, P — оценённая плотность мощности (PSD)
+        # f, P = sp.welch(
+        #     rri,  # равномерно дискретизированный RR‑ряд
+        #     fs=fs,  # частота дискретизации
+        #     nperseg=256  # длина сегмента окна Хэмминга
+        # )
+        # # Интеграл PSD в полосах LF/HF
+        # lf = np.trapz(P[(f >= 0.04) & (f < 0.15)], f[(f >= 0.04) & (f < 0.15)])
+        # hf = np.trapz(P[(f >= 0.15) & (f <= 0.40)], f[(f >= 0.15) & (f <= 0.40)])
+        # lf_hf = lf / hf
+
+        # 3. Нелинейные (Poincaré-plot) показатели -- SD1, SD2, SD1/SD2
+        sd1 = rmssd / np.sqrt(2)
+        sd2 = np.sqrt(2 * sdnn ** 2 - 0.5 * rmssd ** 2)
+        sd1_sd2 = sd1 / sd2
+
+        # 4. Расчёт индексов стресса -- CSI, CVI на основе Poincaré-диаграммы
+        csi = sd2 / sd1  # Сердечный симпатический индекс
+        cvi = math.log10(4 * sd1 * sd2)  # Сердечный вагальный индекс
+
+        index_hrv = {'sdnn':sdnn, 'rmssd':rmssd, 'pnn20':pnn20, 'pnn50':pnn50,
+                     'sd1':sd1, 'sd2':sd2, 'sd1_sd2':sd1_sd2, 'csi':csi, 'cvi':cvi,
+                     'mean_rr': mean_rr, 'median_hr': self.median_hr}
+        return index_hrv
+
+    def pnn20(self, rr_ms: np.ndarray) -> float:
+        """
+        Вычисляет pNN20 для массива RR-интервалов в миллисекундах.
+        pNN20 — это процент соседних RR-интервалов, отличающихся
+        друг от друга более чем на 20 мс
+
+        :return: pNN20 в процентах.
+        """
+        # 1. Разности соседних интервалов
+        diff = np.diff(rr_ms)
+        # 2. Сколько из них по модулю > 20 мс
+        nn20 = np.sum(np.abs(diff) > 20)
+        # 3. Процент от общего числа разностей
+        return nn20 / len(diff) * 100
+
+    def pnn50(self, rr_ms: np.ndarray) -> float:
+        """
+        Вычисляет pNN50 для массива RR-интервалов в миллисекундах.
+        pNN50 — это процент соседних RR-интервалов, отличающихся
+        друг от друга более чем на 50 мс
+
+        :param rr_ms: Массив RR-интервалов в миллисекундах
+        :return: pNN50 в процентах.
+        """
+        # 1. Разности соседних интервалов
+        diff = np.diff(rr_ms)
+        # 2. Сколько из них по модулю > 50 мс
+        nn50 = np.sum(np.abs(diff) > 50)
+        # 3. Процент от общего числа разностей
+        return nn50 / len(diff) * 100
 
     def _bandpass_filter(self, signal: np.ndarray, lowcut=0.7, highcut=4.0) -> np.ndarray:
         """
