@@ -25,6 +25,10 @@ def hrv_to_z(hrv_vec: np.ndarray) -> np.ndarray:
 
 if __name__ == '__main__':
     X_norm = pd.read_csv('dataset_to_autoencoder_scaled.csv').to_numpy()
-    res = hrv_to_z(X_norm[:1])
-    res = res.tolist()
+    # res = hrv_to_z(X_norm[:1])
+    res = [hrv_to_z(x) for x in X_norm]
+    df =pd.DataFrame({'embedding': res})
+    # Сохранение вычисленных эмбедингов
+    df.to_csv('embedding_from_autoencoder.csv', index=False)
+
     print(res)
