@@ -11,7 +11,7 @@ ModelCls = dynamic_import(MODEL_PATH)
 model = ModelCls()
 
 # для видео MPG с PPG-CSV
-ds = load_dataset("data/SCAMPS_smail/output_data/video.avi", vitals_csv="data/SCAMPS_smail/output_data/ppg.csv")
+ds = load_dataset("data/SCAMPS_smail/output_data/video.avi")
 bench = RPPGBenchmark(ds, fps=30.0)
 
 report = bench.evaluate(model)

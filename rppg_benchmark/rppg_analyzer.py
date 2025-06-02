@@ -21,6 +21,7 @@ class RPPGSignalAnalyzer:
     4. 'Стандартное отклонение (ЧСС) HR (HRV)
     5. 'BPM по числу пиков'
     6.  'Число пиков
+
     7. Вычисление комплекса показателей вариабельности сердечного ритма HRV
 
     BPM – это сокращение от "ударов в минуту" (beats per minute).
@@ -37,12 +38,18 @@ class RPPGSignalAnalyzer:
     - визуализация и подготовка данных для оценки моделей.
     """
 
-    def __init__(self, ppg: np.ndarray, fps: float = 30.0):
+    def __init__(self, ppg: np.ndarray, fps: float = 30.0,  threshold: int = 0):
         """
         Инициализация на основе DataFrame с одним столбцом сигнала.
         :param ppg: Масcив 1-D с временным рядом rPPG (сырые значения rPPG)
-        :param fps: Частота кадров, с которой был получен сигнал
+        :param fps: Частота кадров, с которой был получен сигнал Permissible threshold
+        :param threshold: Минимальный допустимый порог размера фрейма в секундах
         """
+        if ppg.size <= threshold*fps:
+            # raise ValueError("PPG сигнал слишком короткий")
+            self.flag = False
+            return None
+        self.flag = True
         self.signal =  ppg.astype(np.float32)
         self.fps = fps
         self.n = len(self.signal)

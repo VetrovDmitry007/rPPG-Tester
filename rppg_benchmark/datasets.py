@@ -58,7 +58,7 @@ class VideoDataset:  # pylint: disable=too-few-public-methods
         cap.release()
 
         # Формируем список образцов
-        self.samples = frames
+        self.samples: List = frames
 
     def __iter__(self) -> Iterable[Tuple[np.ndarray, float]]:
         return iter(self.samples)
