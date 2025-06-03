@@ -20,7 +20,10 @@ model = ModelCls()
 def video_to_hrv(video_path):
     """
     Преобразование видео в HRV с записью в CSV
+
+    :param video_path: путь к видео -- '../data/UBFC-Phys/vid_s7_T2.avi'
     """
+    stem = video_path.stem
     print(f'Обработка видео: {video_path}')
     video_frames = load_dataset(video_path)
     # video_frames = load_dataset("../data/sample/sample_video_1.mp4")
@@ -30,15 +33,17 @@ def video_to_hrv(video_path):
     video_frames_60_sec = [ list(video_frames)[i:i+fps*60] for i in range(0, len(video_frames), fps*60) ]
 
     ls_metrics = []
-    for cn, dataset in enumerate(video_frames_60_sec):
-        print(f'Обрабатывается фрейм {cn+1}/{len(video_frames_60_sec)}')
+    for cn, dataset in enumerate(video_frames_60_sec, start=1):
+        dc_result = {'file': stem, 'frame': cn}
+        print(f'Обрабатывается фрейм {cn}/{len(video_frames_60_sec)}')
         model.reset()
         model.load_dataset(dataset)
         pred_ppg = model.get_ppg()
         analyzer = RPPGSignalAnalyzer(pred_ppg, fps=video_frames.fps, threshold=20)
         if analyzer.flag:
+            dc_result.update(analyzer.index_hrv)
             print(f'{analyzer.index_hrv=}')
-            ls_metrics.append(analyzer.index_hrv)
+            ls_metrics.append(dc_result)
 
     df = pd.DataFrame(ls_metrics)
 

@@ -1,10 +1,10 @@
 """
 Что здесь происходит
-1. hrv_to_z: стандартизируем входной HRV-словарь и пропускаем через энкодер.
+1. hrv_to_z: стандартизируем входной HRV-словарь и пропускаем через автоэнкодер.
 2. Собираем все z-векторы датасета → обучаем KMeans(K=5).
 3. Группируем исходные показатели по метке кластера и смотрим, чем они различаются.
 
-4. Делаем прогноз на обученом автоэнкодер + класторезатор
+4. Делаем прогноз на обученном автоэнкодер + класторезатор
 """
 
 import numpy as np, pandas as pd
@@ -42,17 +42,23 @@ CLUSTER_LABELS = {
 
 def emotion_from_hrv(hrv_dict: dict[str, float]) -> str:
     z = hrv_to_z(hrv_dict).astype(np.float64)
-    print("dtype z:", z.dtype)
+    # print("dtype z:", z.dtype)
     cid = kmeans.predict([z])[0]
     return CLUSTER_LABELS[cid]
 
 
 if __name__ == '__main__':
-    sample = {
-        'mean_rr': 811.1, 'median_hr': 72.1, 'pnn20': 91.3, 'pnn50': 78.3,
-        'rmssd': 278.8, 'sd1': 197.1, 'sd1_sd2': 1.0,
-        'sd2': 196.9, 'sdnn': 197.0, 'csi': 1.0, 'cvi': 5.19
-    }
+    # sample = {
+    #     'mean_rr': 811.1, 'median_hr': 72.1, 'pnn20': 91.3, 'pnn50': 78.3,
+    #     'rmssd': 278.8, 'sd1': 197.1, 'sd1_sd2': 1.0,
+    #     'sd2': 196.9, 'sdnn': 197.0, 'csi': 1.0, 'cvi': 5.19
+    # }
+    #
+    # state = emotion_from_hrv(sample)
+    # print(f"Эмоциональное состояние: {state}")
 
-    state = emotion_from_hrv(sample)
-    print(f"Эмоциональное состояние: {state}")
+    df = pd.read_csv("../VideoDataset/dataset_to_autoencoder.csv")
+    for rec in df.itertuples(index=False):
+        res = emotion_from_hrv(rec._asdict())
+        print(f"Эмоциональное состояние: {res}")
+
